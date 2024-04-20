@@ -11,6 +11,8 @@ presets = {
     "Preset 2 (Passed Away)": [55.55, 9.5, 36.71, 9.91, 4.979, 5.16, 18, 20, 100000, 365]
 }
 
+data = []
+
 # Main application class
 class MuMarrowApp:
     def __init__(self, master):
@@ -51,7 +53,8 @@ class MuMarrowApp:
             inputs_tf = tf.convert_to_tensor(inputs, dtype=tf.double)
             prediction = probability_model(inputs_tf)
             prediction_percentage = max(min(abs(prediction.numpy()[0][0] * 100), 100), 0)
-            messagebox.showinfo("Prediction Result", f"The patient's chance of survival is around: {prediction_percentage:.2f}%")
+            data.append(prediction_percentage)
+            messagebox.showinfo("Prediction Result", f"The patient's chance of survival is around: {prediction_percentage:.2f}%; Current mean: {np.mean(data)}; Current STDEV: {np.std(data)}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to calculate survival chance. Please check the input values. Error: {str(e)}")
 
