@@ -1,65 +1,65 @@
 import tkinter as tk
-from tkinter import messagebox, font as tkfont
+from tkinter import ttk, messagebox
 import tensorflow as tf
 import numpy as np
 
-# Load the model using TFSMLayer for inference
-model_path = '/model'
 probability_model = tf.keras.models.load_model("model.h5")
 
-print("MuMarrow is initializing... Please wait.")
+# Preset data for demonstration purposes
+presets = {
+    "Preset 1 (Survived)": [26.394, 6.6, 11.4, 2, 7.94, 19.01323, 23, 20, 10, 435],
+    "Preset 2 (Passed Away)": [55.55, 9.5, 36.71, 9.91, 4.979, 5.16, 18, 20, 100000, 365]
+}
 
-# Function to predict and display results
-def predict_survival():
-    try:
-        # Collect input values, converting them directly to np.double at input
-        input_values = [
-            np.double(donor_age_entry.get()), np.double(recipient_age_entry.get()), 
-            np.double(recipient_body_mass_entry.get()), np.double(CD34_x1e6_per_kg_entry.get()),
-            np.double(CD3_x1e8_per_kg_entry.get()), np.double(CD3_to_CD34_ratio_entry.get()),
-            np.double(ANC_recovery_entry.get()), np.double(PLT_recovery_entry.get()), 
-            np.double(time_to_acute_GvHD_III_IV_entry.get()), np.double(survival_time_entry.get())
+# Main application class
+class MuMarrowApp:
+    def __init__(self, master):
+        master.title("MuMarrow Survival Prediction App")
+
+        # Creating an internal title for the GUI
+        internal_title = ttk.Label(master, text="MuMarrow Survival Prediction", font=('Helvetica', 16, 'bold'))
+        internal_title.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+
+        self.labels = [
+            "Please enter the donor's age (years):", "Please enter the recipient's age (years):",
+            "Please enter the recipient's body mass (kg):", "Please enter the CD34 x1e6 per kilogram:",
+            "Please enter the x1e8 per kilogram:", "Please enter the CD3 to CD34 ratio:",
+            "Please enter the ANC recovery:", "Please enter the PLT recovery:",
+            "Please enter the time to acute GvHD III/IV:", "Please enter an estimated survival time (days):"
         ]
-        inputs = np.array([input_values], dtype=np.double)
-        
-        # Explicitly cast to tf.double when creating the tensor
-        inputs_tf = tf.convert_to_tensor(inputs, dtype=tf.double)
 
-        # Predict using the model
-        prediction = probability_model(inputs_tf)
-        prediction_percentage = max(min(abs(prediction.numpy()[0][0] * 100), 100), 0)
+        self.entries = []
+        for idx, label_text in enumerate(self.labels):
+            label = ttk.Label(master, text=label_text)
+            label.grid(row=idx+1, column=0, padx=10, pady=5, sticky="w")  # Note: row indices start at 1 to accommodate title
+            entry = ttk.Entry(master)
+            entry.grid(row=idx+1, column=1, padx=10, pady=5, sticky="ew")
+            self.entries.append(entry)
 
-        # Show the result in a messagebox
-        messagebox.showinfo("Prediction Result", f"The patient's chance of survival is around: {prediction_percentage:.2f}%")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to calculate survival chance. Please check the input values. Error: {str(e)}")
+        # Predict button
+        self.predict_button = ttk.Button(master, text="Predict Survival", command=self.predict_survival)
+        self.predict_button.grid(row=len(self.labels)+1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
 
-# Set up the GUI
+        # Preset buttons
+        for idx, (key, values) in enumerate(presets.items(), start=len(self.labels)+2):
+            ttk.Button(master, text=key, command=lambda values=values: self.apply_preset(values)).grid(row=idx, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
+
+    def predict_survival(self):
+        try:
+            input_values = [np.double(entry.get()) for entry in self.entries]
+            inputs = np.array([input_values], dtype=np.double)
+            inputs_tf = tf.convert_to_tensor(inputs, dtype=tf.double)
+            prediction = probability_model(inputs_tf)
+            prediction_percentage = max(min(abs(prediction.numpy()[0][0] * 100), 100), 0)
+            messagebox.showinfo("Prediction Result", f"The patient's chance of survival is around: {prediction_percentage:.2f}%")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to calculate survival chance. Please check the input values. Error: {str(e)}")
+
+    def apply_preset(self, values):
+        for entry, value in zip(self.entries, values):
+            entry.delete(0, tk.END)
+            entry.insert(0, str(value))
+
 root = tk.Tk()
-root.title("MuMarrow Survival Prediction")
-
-# Define and place widgets
-labels = ["Please enter the donor's age (years):", "Please enter the recipient's age (years):",
-          "Please enter the recipient's body mass (kg):", "Please enter the CD34 x1e6 per kilogram:",
-          "Please enter the x1e8 per kilogram:", "Please enter the CD3 to CD34 ratio:",
-          "Please enter the ANC recovery:", "Please enter the PLT recovery:",
-          "Please enter the time to acute GvHD III/IV:", "Please enter an estimated survival time (days):"]
-entries = []
-
-for idx, label in enumerate(labels):
-    label_widget = tk.Label(root, text=label, font=tkfont.Font(family="Helvetica", size=12), anchor="e", padx=10)
-    label_widget.grid(row=idx, column=0, sticky="e")
-    entry = tk.Entry(root, font=tkfont.Font(family="Helvetica", size=12))
-    entry.grid(row=idx, column=1, sticky="w")
-    entries.append(entry)
-
-(donor_age_entry, recipient_age_entry, recipient_body_mass_entry, CD34_x1e6_per_kg_entry,
- CD3_x1e8_per_kg_entry, CD3_to_CD34_ratio_entry, ANC_recovery_entry, PLT_recovery_entry,
- time_to_acute_GvHD_III_IV_entry, survival_time_entry) = entries
-
-# Predict button
-predict_button = tk.Button(root, text="Predict Survival", command=predict_survival, font=tkfont.Font(family="Helvetica", size=12))
-predict_button.grid(row=10, column=0, columnspan=2, pady=10)
-
-# Start the GUI event loop
+app = MuMarrowApp(root)
 root.mainloop()
